@@ -1,0 +1,59 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract SecureMessagingWithFriends {
+    struct Message {
+        address sender;
+        string content;
+        uint256 timestamp;
+    }
+
+    struct Friend {
+        address friendAddress;
+        string nickname;
+    }
+
+    mapping(address => Friend[]) private friends;
+    mapping(address => mapping(address => bool)) private isFriend;
+    mapping(address => Message[]) private messages;
+
+    event FriendAdded(address indexed user, address indexed friendAddress, string nickname);
+    event MessageSent(address indexed from, address indexed to, string content, uint256 timestamp);
+
+    function addFriend(address friendAddress, string memory nickname) public {
+        require(friendAddress != address(0), "Invalid address");
+        require(friendAddress != msg.sender, "You cannot add yourself");
+        require(!isFriend[msg.sender][friendAddress], "Already friends");
+
+        friends[msg.sender].push(Friend({
+            friendAddress: friendAddress,
+            nickname: nickname
+        }));
+        isFriend[msg.sender][friendAddress] = true;
+
+        emit FriendAdded(msg.sender, friendAddress, nickname);
+    }
+
+    function getFriends() public view returns (Friend[] memory) {
+        return friends[msg.sender];
+    }
+
+    function sendMessage(address to, string memory content) public {
+        require(bytes(content).length > 0, "Message content cannot be empty");
+        require(isFriend[msg.sender][to], "Can only send messages to friends");
+
+        Message memory newMessage = Message({
+            sender: msg.sender,
+            content: content,
+            timestamp: block.timestamp
+        });
+
+        messages[to].push(newMessage);
+
+        emit MessageSent(msg.sender, to, content, block.timestamp);
+    }
+
+    function getMessages() public view returns (Message[] memory) {
+        return messages[msg.sender];
+    }
+}
